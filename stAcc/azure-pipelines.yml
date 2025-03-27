@@ -11,9 +11,9 @@ variables:
 - name: AzureRegion
   value: westus3
 - name: parametersFile
-  value: 'parameters-main.json'
+  value: 'AzureToBicep/stAcc/parameters-main.json'
 - name: bicepFile
-  value: main.bicep
+  value: AzureToBicep/stAcc/main.bicep
 
 pool:
   vmImage: ubuntu-latest
