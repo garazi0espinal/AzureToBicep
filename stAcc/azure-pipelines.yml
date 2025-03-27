@@ -1,7 +1,7 @@
 trigger:
   branches:
     include:
-      - master  
+      - main  # Cambia esto según la rama desde la que quieras que se ejecute el pipeline
 
 pool:
   vmImage: 'ubuntu-latest'  # Puedes usar 'windows-latest' si prefieres usar Windows
