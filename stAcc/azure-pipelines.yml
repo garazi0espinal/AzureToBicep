@@ -1,18 +1,18 @@
 trigger:
   branches:
     include:
-      - master  
+      - main  # Cambia esto según la rama desde la que quieras que se ejecute el pipeline
 
 pool:
-  vmImage: 'ubuntu-latest'  
+  vmImage: 'ubuntu-latest'  # Puedes usar 'windows-latest' si prefieres usar Windows
 
 variables:
-  azureSubscription: 'cor-sandbox-espinalg-001'  
-  resourceGroup: 'rg-mazneu-cor-a-sandbox-espinalg-001'  
-  location: 'northeurope' 
-  bicepFile: 'main.bicep' 
-  parametersFile: 'parameters-main.json'
-  deploymentName: 'deployment-bicep' 
+  azureSubscription: 'cor-sandbox-espinalg-001'  # Nombre de tu suscripción de Azure (asegúrate de que esté configurada en Azure DevOps)
+  resourceGroup: 'rg-mazneu-cor-a-sandbox-espinalg-001'  # Nombre del grupo de recursos de destino
+  location: 'northeurope'  # Ubicación de los recursos
+  bicepFile: 'main.bicep'  # Ruta a tu archivo Bicep
+  parametersFile: 'parameters-main.json'  # Ruta al archivo JSON de parámetros
+  deploymentName: 'deployment-bicep'  # Nombre para el despliegue
 
 steps:
 
@@ -43,13 +43,20 @@ steps:
       az account set --subscription $(azureSubscription)
   displayName: 'Iniciar sesión en Azure'
 
-# Paso 4: Compilar la plantilla Bicep (si es necesario)
+# Paso 4: Verificar las rutas de los archivos Bicep y JSON
+- script: |
+    echo "Verificando la ruta del archivo Bicep y parámetros..."
+    echo "Bicep File: $(bicepFile)"
+    echo "Parameters File: $(parametersFile)"
+  displayName: 'Verificar rutas de archivos'
+
+# Paso 5: Compilar la plantilla Bicep (si es necesario)
 - script: |
     echo "Compilando la plantilla Bicep..."
     az bicep build --file $(bicepFile)
   displayName: 'Compilar plantilla Bicep'
 
-# Paso 5: Desplegar la plantilla Bicep en Azure
+# Paso 6: Desplegar la plantilla Bicep en Azure
 - task: AzureCLI@2
   inputs:
     azureSubscription: $(azureSubscription)
@@ -63,7 +70,7 @@ steps:
         --parameters-file $(parametersFile)
   displayName: 'Desplegar plantilla Bicep'
 
-# (Opcional) Paso 6: Verificar el estado del despliegue
+# (Opcional) Paso 7: Verificar el estado del despliegue
 - task: AzureCLI@2
   inputs:
     azureSubscription: $(azureSubscription)
