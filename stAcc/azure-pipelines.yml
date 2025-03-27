@@ -1,0 +1,77 @@
+trigger:
+  branches:
+    include:
+      - main  
+
+pool:
+  vmImage: 'ubuntu-latest'  
+
+variables:
+  azureSubscription: 'cor-sandbox-espinalg-001'  
+  resourceGroup: 'rg-mazneu-cor-a-sandbox-espinalg-001'  
+  location: 'northeurope' 
+  bicepFile: 'main.bicep' 
+  parametersFile: 'parameters-main.json'
+  deploymentName: 'deployment-bicep' 
+
+steps:
+
+# Paso 1: Obtener el código fuente del repositorio
+- task: Checkout@1
+  displayName: 'Obtener código fuente'
+
+# Paso 2: Instalar la CLI de Azure
+- task: AzureCLI@2
+  inputs:
+    azureSubscription: $(azureSubscription)
+    scriptType: 'bash'
+    scriptLocation: 'inlineScript'
+    inlineScript: |
+      echo "Instalando Azure CLI..."
+      curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+      echo "Azure CLI instalado"
+  displayName: 'Instalar Azure CLI'
+
+# Paso 3: Iniciar sesión en Azure
+- task: AzureCLI@2
+  inputs:
+    azureSubscription: $(azureSubscription)
+    scriptType: 'bash'
+    scriptLocation: 'inlineScript'
+    inlineScript: |
+      echo "Iniciando sesión en Azure..."
+      az account set --subscription $(azureSubscription)
+  displayName: 'Iniciar sesión en Azure'
+
+# Paso 4: Compilar la plantilla Bicep (si es necesario)
+- script: |
+    echo "Compilando la plantilla Bicep..."
+    az bicep build --file $(bicepFile)
+  displayName: 'Compilar plantilla Bicep'
+
+# Paso 5: Desplegar la plantilla Bicep en Azure
+- task: AzureCLI@2
+  inputs:
+    azureSubscription: $(azureSubscription)
+    scriptType: 'bash'
+    scriptLocation: 'inlineScript'
+    inlineScript: |
+      echo "Desplegando la plantilla Bicep..."
+      az deployment group create \
+        --resource-group $(resourceGroup) \
+        --template-file $(bicepFile) \
+        --parameters-file $(parametersFile)
+  displayName: 'Desplegar plantilla Bicep'
+
+# (Opcional) Paso 6: Verificar el estado del despliegue
+- task: AzureCLI@2
+  inputs:
+    azureSubscription: $(azureSubscription)
+    scriptType: 'bash'
+    scriptLocation: 'inlineScript'
+    inlineScript: |
+      echo "Verificando el estado del despliegue..."
+      az deployment group show \
+        --resource-group $(resourceGroup) \
+        --name $(deploymentName)
+  displayName: 'Verificar estado del despliegue'
