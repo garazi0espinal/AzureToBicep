@@ -4,16 +4,16 @@ trigger:
       - main  # Cambia esto según la rama desde la que quieras que se ejecute el pipeline
 
 variables:
-- name: ServiceConnectionName
-  value: cor-sandbox-espinalg-001
-- name: ResourceGroupName
-  value: rg-mazneu-cor-a-sandbox-espinalg-001
-- name: AzureRegion
-  value: westus3
-- name: parametersFile
-  value: 'AzureToBicep/stAcc/parameters-main.json'
-- name: bicepFile
-  value: AzureToBicep/stAcc/main.bicep
+  - name: ServiceConnectionName
+    value: cor-sandbox-espinalg-001
+  - name: ResourceGroupName
+    value: rg-mazneu-cor-a-sandbox-espinalg-001
+  - name: AzureRegion
+    value: westus3
+  - name: parametersFile
+    value: 'AzureToBicep/stAcc/parameters-main.json'
+  - name: bicepFile
+    value: 'AzureToBicep/stAcc/main.bicep'
 
 pool:
   vmImage: ubuntu-latest
@@ -23,20 +23,33 @@ stages:
 - stage: Lint
   jobs:
   - job: LintCode
-    displayName: Lint code
+    displayName: Lint Bicep Code
     steps:
+      - checkout: self  # Asegura que el código fuente se descarga
+
       - script: |
-          az bicep build --file $(bicepFile)
+          ls -l $(System.DefaultWorkingDirectory)/AzureToBicep/stAcc  # Verifica archivos
+        displayName: "Verificar archivos en el agente"
+
+      - script: |
+          az bicep build --file $(System.DefaultWorkingDirectory)/$(bicepFile)
         name: LintBicepCode
         displayName: Run Bicep linter
 
 - stage: Publish
   jobs:
   - job: Publish
+    displayName: Deploy Bicep Template
     steps:
+      - checkout: self  # Asegura que el código fuente se descarga
+
+      - script: |
+          ls -l $(System.DefaultWorkingDirectory)/AzureToBicep/stAcc  # Verifica archivos
+        displayName: "Verificar archivos en el agente"
+
       - task: AzureCLI@2
-        name: Publish
-        displayName: Publish template spec
+        name: Deploy
+        displayName: Deploy Bicep Template
         inputs:
           azureSubscription: $(ServiceConnectionName)
           scriptType: 'bash'
@@ -44,6 +57,6 @@ stages:
           inlineScript: |
             az deployment group create \
               --resource-group $(ResourceGroupName) \
-              --version $(Build.BuildNumber) \
-              --template-file $(bicepFile) \
-              --parameters-file $(parametersFile) \
+              --name "Deployment-$(Build.BuildId)" \
+              --template-file $(System.DefaultWorkingDirectory)/$(bicepFile) \
+              --parameters @$(System.DefaultWorkingDirectory)/$(parametersFile)
