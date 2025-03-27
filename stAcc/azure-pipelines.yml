@@ -68,7 +68,7 @@ steps:
         --resource-group $(resourceGroup) \
         --template-file $(bicepFile) \
         --parameters-file $(parametersFile)
-  displayName: 'Desplegar plantilla Bicep'
+  displayName: 'Desplegar Bicep'
 
 # (Opcional) Paso 7: Verificar el estado del despliegue
 - task: AzureCLI@2
