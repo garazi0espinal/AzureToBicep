@@ -42,7 +42,7 @@ stages:
           scriptType: 'bash'
           scriptLocation: 'inlineScript'
           inlineScript: |
-            az storage account create \
+            az deployment group create \
               --resource-group $(ResourceGroupName) \
               --version $(Build.BuildNumber) \
               --template-file $(bicepFile) \
