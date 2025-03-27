@@ -3,82 +3,47 @@ trigger:
     include:
       - main  # Cambia esto según la rama desde la que quieras que se ejecute el pipeline
 
-pool:
-  vmImage: 'ubuntu-latest'  # Puedes usar 'windows-latest' si prefieres usar Windows
-
 variables:
-  azureSubscription: 'cor-sandbox-espinalg-001'  # Nombre de tu suscripción de Azure (asegúrate de que esté configurada en Azure DevOps)
-  resourceGroup: 'rg-mazneu-cor-a-sandbox-espinalg-001'  # Nombre del grupo de recursos de destino
-  location: 'northeurope'  # Ubicación de los recursos
-  bicepFile: 'main.bicep'  # Ruta a tu archivo Bicep
-  parametersFile: 'parameters-main.json'  # Ruta al archivo JSON de parámetros
-  deploymentName: 'deployment-bicep'  # Nombre para el despliegue
+- name: ServiceConnectionName
+  value: cor-sandbox-espinalg-001
+- name: ResourceGroupName
+  value: rg-mazneu-cor-a-sandbox-espinalg-001
+- name: AzureRegion
+  value: westus3
+- name: parametersFile
+  value: 'parameters-main.json'
+- name: bicepFile
+  value: main.bicep
 
-steps:
+pool:
+  vmImage: ubuntu-latest
 
-# Paso 1: Obtener el código fuente del repositorio
-- task: Checkout@1
-  displayName: 'Obtener código fuente'
+stages:
 
-# Paso 2: Instalar la CLI de Azure
-- task: AzureCLI@2
-  inputs:
-    azureSubscription: $(azureSubscription)
-    scriptType: 'bash'
-    scriptLocation: 'inlineScript'
-    inlineScript: |
-      echo "Instalando Azure CLI..."
-      curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
-      echo "Azure CLI instalado"
-  displayName: 'Instalar Azure CLI'
+- stage: Lint
+  jobs:
+  - job: LintCode
+    displayName: Lint code
+    steps:
+      - script: |
+          az bicep build --file $(bicepFile)
+        name: LintBicepCode
+        displayName: Run Bicep linter
 
-# Paso 3: Iniciar sesión en Azure
-- task: AzureCLI@2
-  inputs:
-    azureSubscription: $(azureSubscription)
-    scriptType: 'bash'
-    scriptLocation: 'inlineScript'
-    inlineScript: |
-      echo "Iniciando sesión en Azure..."
-      az account set --subscription $(azureSubscription)
-  displayName: 'Iniciar sesión en Azure'
-
-# Paso 4: Verificar las rutas de los archivos Bicep y JSON
-- script: |
-    echo "Verificando la ruta del archivo Bicep y parámetros..."
-    echo "Bicep File: $(bicepFile)"
-    echo "Parameters File: $(parametersFile)"
-  displayName: 'Verificar rutas de archivos'
-
-# Paso 5: Compilar la plantilla Bicep (si es necesario)
-- script: |
-    echo "Compilando la plantilla Bicep..."
-    az bicep build --file $(bicepFile)
-  displayName: 'Compilar plantilla Bicep'
-
-# Paso 6: Desplegar la plantilla Bicep en Azure
-- task: AzureCLI@2
-  inputs:
-    azureSubscription: $(azureSubscription)
-    scriptType: 'bash'
-    scriptLocation: 'inlineScript'
-    inlineScript: |
-      echo "Desplegando la plantilla Bicep..."
-      az deployment group create \
-        --resource-group $(resourceGroup) \
-        --template-file $(bicepFile) \
-        --parameters-file $(parametersFile)
-  displayName: 'Desplegar Bicep'
-
-# (Opcional) Paso 7: Verificar el estado del despliegue
-- task: AzureCLI@2
-  inputs:
-    azureSubscription: $(azureSubscription)
-    scriptType: 'bash'
-    scriptLocation: 'inlineScript'
-    inlineScript: |
-      echo "Verificando el estado del despliegue..."
-      az deployment group show \
-        --resource-group $(resourceGroup) \
-        --name $(deploymentName)
-  displayName: 'Verificar estado del despliegue'
+- stage: Publish
+  jobs:
+  - job: Publish
+    steps:
+      - task: AzureCLI@2
+        name: Publish
+        displayName: Publish template spec
+        inputs:
+          azureSubscription: $(ServiceConnectionName)
+          scriptType: 'bash'
+          scriptLocation: 'inlineScript'
+          inlineScript: |
+            az storage account create \
+              --resource-group $(ResourceGroupName) \
+              --version $(Build.BuildNumber) \
+              --template-file $(bicepFile) \
+              --parameters-file $(parametersFile) \
